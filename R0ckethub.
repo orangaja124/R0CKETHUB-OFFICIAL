@@ -1,0 +1,629 @@
+-- r0cketHub FINAL (SAFE MODE)
+-- Spinner -> Key System -> Progress Bar -> Main Hub
+-- Key: "h4ck1n"
+-- NOTE: k00pgui is NOT auto-executed. It will be copied to clipboard for manual use.
+--        Infinite Yield execution is provided (pcall + user-initiated).
+-- Paste this as a LocalScript under StarterGui.
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local player = Players.LocalPlayer
+
+-- Config / Links
+local HUB_KEY = "h4ck1n"
+local GET_KEY_LINK = "https://github.com/orangaja124/r0ckethub/blob/main/Key"
+local SCRIPT_HUB_KEY = "r0cket" -- internal script hub key (kept from earlier)
+local INFINITE_YIELD_URL = "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"
+local K00PGUI_PASTE = "https://pastebin.com/raw/3CJCyh71"
+local K00PGUI_LOADSTRING = 'loadstring(game:HttpGet("'..K00PGUI_PASTE..'"))()'
+
+-- Theme (merah neon + hitam)
+local COLOR_BRIGHT = Color3.fromRGB(230,75,75)
+local COLOR_DARK = Color3.fromRGB(139,46,46)
+local COLOR_BG = Color3.fromRGB(20,20,20)
+local COLOR_ACCENT = Color3.fromRGB(255,120,120)
+
+-- Utilities
+local function safeCopy(text)
+    if not text then return false end
+    if setclipboard then
+        local ok = pcall(setclipboard, tostring(text))
+        return ok
+    elseif toclipboard then
+        local ok = pcall(toclipboard, tostring(text))
+        return ok
+    else
+        return false
+    end
+end
+
+local function makeNotif(parent)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -16, 0, 22)
+    lbl.Position = UDim2.new(0, 8, 1, -34)
+    lbl.BackgroundColor3 = Color3.fromRGB(0,0,0)
+    lbl.BackgroundTransparency = 0.35
+    lbl.TextColor3 = Color3.fromRGB(255,255,255)
+    lbl.Font = Enum.Font.SourceSans
+    lbl.TextSize = 14
+    lbl.Text = ""
+    lbl.Visible = false
+    lbl.Parent = parent
+    return lbl
+end
+
+local function showTemp(notifLabel, text, t)
+    t = t or 3
+    if notifLabel then
+        notifLabel.Text = text
+        notifLabel.Visible = true
+        task.delay(t, function()
+            if notifLabel and notifLabel.Parent then notifLabel.Visible = false end
+        end)
+    end
+end
+
+-- Clear any old UI named r0cketHub in PlayerGui
+pcall(function()
+    local existing = player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("r0cketHub")
+    if existing then existing:Destroy() end
+end)
+
+-- root ScreenGui
+local screen = Instance.new("ScreenGui")
+screen.Name = "r0cketHub"
+screen.ResetOnSpawn = false
+screen.Parent = player:WaitForChild("PlayerGui")
+
+-- ---------- Spinner (initial) ----------
+local function showSpinner(duration)
+    duration = duration or 2
+    local sGui = Instance.new("ScreenGui", screen)
+    sGui.Name = "SpinnerGui"
+    local bg = Instance.new("Frame", sGui)
+    bg.Size = UDim2.new(1,0,1,0)
+    bg.BackgroundColor3 = COLOR_BG
+    bg.BackgroundTransparency = 0.25
+
+    local spinner = Instance.new("ImageLabel", bg)
+    spinner.AnchorPoint = Vector2.new(0.5,0.5)
+    spinner.Position = UDim2.new(0.5,0,0.45,0)
+    spinner.Size = UDim2.new(0, 120, 0, 120)
+    spinner.Image = "rbxassetid://7743868546" -- generic spinner icon
+    spinner.ImageColor3 = COLOR_BRIGHT
+    spinner.BackgroundTransparency = 1
+
+    local label = Instance.new("TextLabel", bg)
+    label.AnchorPoint = Vector2.new(0.5,0)
+    label.Position = UDim2.new(0.5,0,0.7,0)
+    label.Size = UDim2.new(0, 400, 0, 40)
+    label.BackgroundTransparency = 1
+    label.Text = "Starting r0cketHub..."
+    label.TextColor3 = COLOR_BRIGHT
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 22
+
+    local running = true
+    task.spawn(function()
+        while running and spinner.Parent do
+            spinner.Rotation = spinner.Rotation + 8
+            task.wait(0.03)
+        end
+    end)
+
+    task.wait(duration)
+    running = false
+    sGui:Destroy()
+end
+
+-- ---------- Key System UI ----------
+local function showKeySystem()
+    local gui = Instance.new("Frame", screen)
+    gui.Name = "KeyOverlay"
+    gui.AnchorPoint = Vector2.new(0.5,0.5)
+    gui.Position = UDim2.new(0.5,0,0.5,0)
+    gui.Size = UDim2.new(0,520,0,260)
+    gui.BackgroundColor3 = COLOR_BRIGHT
+    Instance.new("UICorner", gui).CornerRadius = UDim.new(0,12)
+
+    local title = Instance.new("TextLabel", gui)
+    title.Size = UDim2.new(1,-32,0,40)
+    title.Position = UDim2.new(0,16,0,12)
+    title.BackgroundTransparency = 1
+    title.Text = "r0cketHub — Key Required"
+    title.TextColor3 = Color3.fromRGB(255,255,255)
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 20
+    title.TextXAlignment = Enum.TextXAlignment.Left
+
+    local info = Instance.new("TextLabel", gui)
+    info.Size = UDim2.new(1,-32,0,24)
+    info.Position = UDim2.new(0,16,0,56)
+    info.BackgroundTransparency = 1
+    info.Text = "Press Get Key to copy link, then paste key below."
+    info.TextColor3 = COLOR_ACCENT
+    info.Font = Enum.Font.SourceSans
+    info.TextSize = 14
+    info.TextXAlignment = Enum.TextXAlignment.Left
+
+    local box = Instance.new("TextBox", gui)
+    box.Size = UDim2.new(0, 360, 0, 36)
+    box.Position = UDim2.new(0, 16, 0, 96)
+    box.PlaceholderText = "Enter key here..."
+    box.BackgroundColor3 = COLOR_BG
+    box.TextColor3 = COLOR_BRIGHT
+    box.Font = Enum.Font.SourceSans
+    box.TextSize = 16
+    box.ClearTextOnFocus = false
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0,8)
+
+    local btnGet = Instance.new("TextButton", gui)
+    btnGet.Size = UDim2.new(0,180,0,40)
+    btnGet.Position = UDim2.new(0,16,0,148)
+    btnGet.BackgroundColor3 = COLOR_DARK
+    btnGet.Text = "Get Key"
+    btnGet.Font = Enum.Font.SourceSansBold
+    btnGet.TextColor3 = Color3.fromRGB(255,255,255)
+    Instance.new("UICorner", btnGet).CornerRadius = UDim.new(0,8)
+
+    local btnCheck = Instance.new("TextButton", gui)
+    btnCheck.Size = UDim2.new(0,180,0,40)
+    btnCheck.Position = UDim2.new(0,204,0,148)
+    btnCheck.BackgroundColor3 = Color3.fromRGB(120,20,20)
+    btnCheck.Text = "Check Key"
+    btnCheck.Font = Enum.Font.SourceSansBold
+    btnCheck.TextColor3 = Color3.fromRGB(255,255,255)
+    Instance.new("UICorner", btnCheck).CornerRadius = UDim.new(0,8)
+
+    local gateNotif = makeNotif(gui)
+
+    btnGet.MouseButton1Click:Connect(function()
+        if safeCopy(GET_KEY_LINK) then
+            showTemp(gateNotif, "Get key link copied to clipboard", 3)
+        else
+            showTemp(gateNotif, "Clipboard unavailable. Link:\n"..GET_KEY_LINK, 5)
+        end
+    end)
+
+    local function onCheck()
+        if tostring(box.Text or "") == HUB_KEY then
+            -- close gate and show progress bar then load main hub
+            gui:Destroy()
+            showProgressBar("Loading r0cketHub...", 2.4, function()
+                createMainHub() -- defined below
+            end)
+        else
+            box.Text = ""
+            showTemp(gateNotif, "Invalid key!", 2.6)
+        end
+    end
+
+    btnCheck.MouseButton1Click:Connect(onCheck)
+    box.FocusLost:Connect(function(enter)
+        if enter then onCheck() end
+    end)
+end
+
+-- ---------- Progress bar (with callback) ----------
+function showProgressBar(titleText, duration, finishedCallback)
+    duration = duration or 2.5
+    local gui = Instance.new("ScreenGui", screen)
+    gui.Name = "ProgressGui"
+
+    local frame = Instance.new("Frame", gui)
+    frame.AnchorPoint = Vector2.new(0.5,0.5)
+    frame.Position = UDim2.new(0.5,0,0.5,0)
+    frame.Size = UDim2.new(0,520,0,140)
+    frame.BackgroundColor3 = COLOR_BG
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
+
+    local title = Instance.new("TextLabel", frame)
+    title.Position = UDim2.new(0,16,0,12)
+    title.Size = UDim2.new(1,-32,0,36)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 20
+    title.TextColor3 = COLOR_BRIGHT
+    title.Text = titleText or "Loading..."
+
+    local barBg = Instance.new("Frame", frame)
+    barBg.Position = UDim2.new(0,16,0,64)
+    barBg.Size = UDim2.new(1,-32,0,22)
+    barBg.BackgroundColor3 = Color3.fromRGB(30,10,10)
+    Instance.new("UICorner", barBg).CornerRadius = UDim.new(0,8)
+
+    local bar = Instance.new("Frame", barBg)
+    bar.Size = UDim2.new(0,6,1,0)
+    bar.Position = UDim2.new(0,0,0,0)
+    bar.BackgroundColor3 = COLOR_DARK
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(0,8)
+
+    local progressLabel = Instance.new("TextLabel", frame)
+    progressLabel.Position = UDim2.new(0,16,0,92)
+    progressLabel.Size = UDim2.new(1,-32,0,22)
+    progressLabel.BackgroundTransparency = 1
+    progressLabel.TextColor3 = COLOR_BRIGHT
+    progressLabel.Font = Enum.Font.SourceSans
+    progressLabel.TextSize = 14
+    progressLabel.Text = "0%"
+
+    -- animate
+    local steps = math.max(20, math.floor(duration / 0.02))
+    for i = 1, steps do
+        local pct = i/steps
+        bar:TweenSize(UDim2.new(pct,0,1,0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.02, true)
+        progressLabel.Text = tostring(math.floor(pct*100)) .. "%"
+        task.wait(0.02)
+    end
+
+    gui:Destroy()
+    if type(finishedCallback) == "function" then finishedCallback() end
+end
+
+-- ---------- Create Main Hub ----------
+function createMainHub()
+    -- fetch scan info
+    local scan = {
+        gameName = tostring(game.Name or "Unknown"),
+        placeId = tostring(game.PlaceId or "Unknown"),
+        playerName = tostring(player.Name or "Unknown"),
+        playerId = tostring(player.UserId or 0),
+        avatar = nil,
+    }
+    pcall(function()
+        local ok, url = pcall(function()
+            return Players:GetUserThumbnailAsync(tonumber(scan.playerId), Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size420x420)
+        end)
+        if ok then scan.avatar = url end
+    end)
+
+    local gui = Instance.new("Frame", screen)
+    gui.Name = "MainHub"
+    gui.AnchorPoint = Vector2.new(0.5,0.5)
+    gui.Position = UDim2.new(0.5,0,0.5,0)
+    gui.Size = UDim2.new(0, 720, 0, 460)
+    gui.BackgroundColor3 = COLOR_BG
+    Instance.new("UICorner", gui).CornerRadius = UDim.new(0,12)
+    gui.Active = true
+    gui.Draggable = true
+
+    -- header bright
+    local header = Instance.new("Frame", gui)
+    header.Size = UDim2.new(1,0,0,110)
+    header.Position = UDim2.new(0,0,0,0)
+    header.BackgroundColor3 = COLOR_BRIGHT
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0,12)
+
+    local title = Instance.new("TextLabel", header)
+    title.Position = UDim2.new(0,16,0,12)
+    title.Size = UDim2.new(1,-32,0,36)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 26
+    title.TextColor3 = Color3.fromRGB(255,255,255)
+    title.Text = "r0cketHub"
+
+    local sub = Instance.new("TextLabel", header)
+    sub.Position = UDim2.new(0,16,0,56)
+    sub.Size = UDim2.new(1,-32,0,24)
+    sub.BackgroundTransparency = 1
+    sub.Font = Enum.Font.SourceSans
+    sub.TextSize = 14
+    sub.TextColor3 = COLOR_ACCENT
+    sub.Text = "Scanned: "..scan.gameName.."  •  ID: "..scan.placeId
+
+    -- bottom strip
+    local bottom = Instance.new("Frame", gui)
+    bottom.Size = UDim2.new(1,0,0,64)
+    bottom.Position = UDim2.new(0,0,1,-64)
+    bottom.BackgroundColor3 = COLOR_DARK
+    Instance.new("UICorner", bottom).CornerRadius = UDim.new(0,8)
+
+    local btnClose = Instance.new("TextButton", bottom)
+    btnClose.Size = UDim2.new(0,140,0,40)
+    btnClose.Position = UDim2.new(1,-156,0,12)
+    btnClose.Text = "Close"
+    btnClose.BackgroundColor3 = Color3.fromRGB(160,30,30)
+    btnClose.Font = Enum.Font.SourceSansBold
+    Instance.new("UICorner", btnClose).CornerRadius = UDim.new(0,6)
+
+    local notifLabel = makeNotif(gui)
+
+    -- left tabs
+    local tabs = Instance.new("Frame", gui)
+    tabs.Size = UDim2.new(0,160,1,-174)
+    tabs.Position = UDim2.new(0,16,0,126)
+    tabs.BackgroundTransparency = 1
+
+    local function tabButton(text, y)
+        local b = Instance.new("TextButton", tabs)
+        b.Size = UDim2.new(1,0,0,44)
+        b.Position = UDim2.new(0,0,0,y)
+        b.BackgroundColor3 = COLOR_DARK
+        b.Text = text
+        b.Font = Enum.Font.SourceSansBold
+        b.TextColor3 = Color3.fromRGB(255,255,255)
+        b.TextSize = 16
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+        return b
+    end
+
+    local tHome = tabButton("Home", 0)
+    local tExec = tabButton("Executor", 56)
+    local tScriptHub = tabButton("Script Hub", 112)
+    local tCredits = tabButton("Credits", 168)
+
+    -- content area
+    local content = Instance.new("Frame", gui)
+    content.Size = UDim2.new(1, -212, 1, -174)
+    content.Position = UDim2.new(0, 192, 0, 126)
+    content.BackgroundTransparency = 1
+
+    local pages = {}
+
+    -- Home page
+    do
+        local page = Instance.new("Frame", content)
+        page.Size = UDim2.new(1,0,1,0)
+        page.BackgroundTransparency = 1
+        pages["Home"] = page
+
+        local avatarImg = Instance.new("ImageLabel", page)
+        avatarImg.Size = UDim2.new(0,140,0,140)
+        avatarImg.Position = UDim2.new(0,0,0,0)
+        avatarImg.BackgroundTransparency = 1
+        avatarImg.Image = scan.avatar or ""
+        Instance.new("UICorner", avatarImg).CornerRadius = UDim.new(0,8)
+
+        local infoBox = Instance.new("Frame", page)
+        infoBox.Size = UDim2.new(1,-160,0,140)
+        infoBox.Position = UDim2.new(0,152,0,0)
+        infoBox.BackgroundColor3 = Color3.fromRGB(18,18,18)
+        Instance.new("UICorner", infoBox).CornerRadius = UDim.new(0,8)
+
+        local labelGame = Instance.new("TextLabel", infoBox)
+        labelGame.Position = UDim2.new(0,8,0,6)
+        labelGame.Size = UDim2.new(1,-16,0,28)
+        labelGame.BackgroundTransparency = 1
+        labelGame.Text = "Game: "..scan.gameName
+        labelGame.Font = Enum.Font.SourceSansBold
+        labelGame.TextSize = 16
+        labelGame.TextColor3 = COLOR_ACCENT
+        labelGame.TextXAlignment = Enum.TextXAlignment.Left
+
+        local gameIdBtn = Instance.new("TextButton", infoBox)
+        gameIdBtn.Position = UDim2.new(0,8,0,40)
+        gameIdBtn.Size = UDim2.new(1,-16,0,28)
+        gameIdBtn.BackgroundColor3 = Color3.fromRGB(28,28,28)
+        gameIdBtn.Text = "Game ID: "..scan.placeId.." (click to copy)"
+        gameIdBtn.Font = Enum.Font.SourceSans
+        gameIdBtn.TextSize = 14
+        gameIdBtn.TextColor3 = Color3.fromRGB(230,230,230)
+        Instance.new("UICorner", gameIdBtn).CornerRadius = UDim.new(0,6)
+
+        gameIdBtn.MouseButton1Click:Connect(function()
+            if safeCopy(scan.placeId) then
+                showTemp(notifLabel, "Game ID copied to clipboard", 2.6)
+            else
+                showTemp(notifLabel, "Clipboard not available. Game ID: "..scan.placeId, 4)
+            end
+        end)
+
+        local accBtn = Instance.new("TextButton", infoBox)
+        accBtn.Position = UDim2.new(0,8,0,76)
+        accBtn.Size = UDim2.new(1,-16,0,28)
+        accBtn.BackgroundColor3 = Color3.fromRGB(28,28,28)
+        accBtn.Text = "Account: "..scan.playerName.." ("..scan.playerId..") (click to copy ID)"
+        accBtn.Font = Enum.Font.SourceSans
+        accBtn.TextSize = 14
+        accBtn.TextColor3 = Color3.fromRGB(230,230,230)
+        Instance.new("UICorner", accBtn).CornerRadius = UDim.new(0,6)
+
+        accBtn.MouseButton1Click:Connect(function()
+            if safeCopy(scan.playerId) then
+                showTemp(notifLabel, "Account ID copied to clipboard", 2.6)
+            else
+                showTemp(notifLabel, "Clipboard not available. Account ID: "..scan.playerId, 4)
+            end
+        end)
+
+        local hint = Instance.new("TextLabel", infoBox)
+        hint.Position = UDim2.new(0,8,1,-34)
+        hint.Size = UDim2.new(1,-16,0,28)
+        hint.BackgroundTransparency = 1
+        hint.Font = Enum.Font.SourceSans
+        hint.TextSize = 13
+        hint.Text = "Tip: click Game ID / Account ID to copy."
+        hint.TextColor3 = Color3.fromRGB(200,200,200)
+    end
+
+    -- Executor page
+    do
+        local page = Instance.new("Frame", content)
+        page.Size = UDim2.new(1,0,1,0)
+        page.Visible = false
+        pages["Executor"] = page
+
+        local execBox = Instance.new("TextBox", page)
+        execBox.Size = UDim2.new(1,-16,0,260)
+        execBox.Position = UDim2.new(0,8,0,8)
+        execBox.BackgroundColor3 = Color3.fromRGB(18,18,18)
+        execBox.TextColor3 = Color3.fromRGB(230,230,230)
+        execBox.MultiLine = true
+        execBox.ClearTextOnFocus = false
+        execBox.Font = Enum.Font.Code
+        execBox.PlaceholderText = "-- paste script here --"
+        Instance.new("UICorner", execBox).CornerRadius = UDim.new(0,6)
+
+        local btnExec = Instance.new("TextButton", page)
+        btnExec.Size = UDim2.new(0,140,0,36)
+        btnExec.Position = UDim2.new(0,8,0,276)
+        btnExec.Text = "Execute"
+        btnExec.BackgroundColor3 = COLOR_DARK
+
+        local btnClear = Instance.new("TextButton", page)
+        btnClear.Size = UDim2.new(0,140,0,36)
+        btnClear.Position = UDim2.new(0,156,0,276)
+        btnClear.Text = "Clear"
+        btnClear.BackgroundColor3 = Color3.fromRGB(100,40,40)
+
+        local btnCopy = Instance.new("TextButton", page)
+        btnCopy.Size = UDim2.new(0,140,0,36)
+        btnCopy.Position = UDim2.new(0,304,0,276)
+        btnCopy.Text = "Copy"
+        btnCopy.BackgroundColor3 = Color3.fromRGB(100,60,60)
+
+        btnExec.MouseButton1Click:Connect(function()
+            local code = tostring(execBox.Text or "")
+            if code == "" then
+                showTemp(notifLabel, "Exec box is empty.", 2.6); return
+            end
+            local ok, fn = pcall(function() return loadstring(code) end)
+            if not ok or typeof(fn) ~= "function" then
+                showTemp(notifLabel, "Loadstring compile error.", 4); return
+            end
+            local succ, res = pcall(fn)
+            if succ then showTemp(notifLabel, "Script executed.", 3)
+            else showTemp(notifLabel, "Error: "..tostring(res), 5) end
+        end)
+
+        btnClear.MouseButton1Click:Connect(function() execBox.Text = "" end)
+        btnCopy.MouseButton1Click:Connect(function()
+            if safeCopy(execBox.Text) then showTemp(notifLabel, "Copied to clipboard.", 2.6)
+            else showTemp(notifLabel, "Clipboard not available.", 3) end
+        end)
+    end
+
+    -- Script Hub page
+    do
+        local page = Instance.new("Frame", content)
+        page.Size = UDim2.new(1,0,1,0)
+        page.Visible = false
+        pages["Script Hub"] = page
+
+        local info = Instance.new("TextLabel", page)
+        info.Size = UDim2.new(1,-16,0,44)
+        info.Position = UDim2.new(0,8,0,8)
+        info.BackgroundTransparency = 1
+        info.Font = Enum.Font.SourceSans
+        info.TextSize = 14
+        info.TextColor3 = COLOR_ACCENT
+        info.Text = "Script Hub: paste script hub key to unlock scripts (internal key: r0cket)."
+
+        local keyBox2 = Instance.new("TextBox", page)
+        keyBox2.Size = UDim2.new(0,260,0,34)
+        keyBox2.Position = UDim2.new(0,8,0,60)
+        keyBox2.PlaceholderText = "Enter Script Hub key..."
+        keyBox2.BackgroundColor3 = Color3.fromRGB(18,18,18)
+        keyBox2.TextColor3 = Color3.fromRGB(230,230,230)
+        Instance.new("UICorner", keyBox2).CornerRadius = UDim.new(0,6)
+
+        local verify2 = Instance.new("TextButton", page)
+        verify2.Size = UDim2.new(0,140,0,34)
+        verify2.Position = UDim2.new(0,278,0,60)
+        verify2.Text = "Verify"
+        verify2.BackgroundColor3 = COLOR_DARK
+        Instance.new("UICorner", verify2).CornerRadius = UDim.new(0,6)
+
+        local unlockedFrame = Instance.new("Frame", page)
+        unlockedFrame.Size = UDim2.new(1,-16,0,160)
+        unlockedFrame.Position = UDim2.new(0,8,0,110)
+        unlockedFrame.BackgroundTransparency = 1
+        unlockedFrame.Visible = false
+
+        local iyBtn = Instance.new("TextButton", unlockedFrame)
+        iyBtn.Size = UDim2.new(0,320,0,44)
+        iyBtn.Position = UDim2.new(0,8,0,8)
+        iyBtn.Text = "Infinite Yield (Execute)"
+        iyBtn.BackgroundColor3 = Color3.fromRGB(40,140,40)
+        Instance.new("UICorner", iyBtn).CornerRadius = UDim.new(0,6)
+
+        local k00pBtn = Instance.new("TextButton", unlockedFrame)
+        k00pBtn.Size = UDim2.new(0,320,0,44)
+        k00pBtn.Position = UDim2.new(0,348,0,8)
+        k00pBtn.Text = "k00pgui (Copy loadstring)"
+        k00pBtn.BackgroundColor3 = Color3.fromRGB(70,70,170)
+        Instance.new("UICorner", k00pBtn).CornerRadius = UDim.new(0,6)
+
+        local note = Instance.new("TextLabel", unlockedFrame)
+        note.Size = UDim2.new(1,-16,0,48)
+        note.Position = UDim2.new(0,8,0,64)
+        note.BackgroundTransparency = 1
+        note.TextWrapped = true
+        note.Font = Enum.Font.SourceSans
+        note.TextSize = 13
+        note.TextColor3 = Color3.fromRGB(200,200,200)
+        note.Text = "Infinite Yield: executes a public admin script. k00pgui: copied as loadstring; run manually if you choose."
+
+        verify2.MouseButton1Click:Connect(function()
+            if tostring(keyBox2.Text or "") == SCRIPT_HUB_KEY then
+                showTemp(notifLabel, "Script Hub unlocked (beta notice).", 3)
+                unlockedFrame.Visible = true
+            else
+                showTemp(notifLabel, "Invalid Script Hub key!", 2.6)
+            end
+        end)
+
+        iyBtn.MouseButton1Click:Connect(function()
+            showTemp(notifLabel, "Executing Infinite Yield...", 2)
+            task.spawn(function()
+                local ok, body = pcall(function() return game:HttpGet(INFINITE_YIELD_URL) end)
+                if not ok or not body then showTemp(notifLabel, "Failed to fetch Infinite Yield", 4); return end
+                local ok2, fn = pcall(function() return loadstring(body) end)
+                if not ok2 or typeof(fn) ~= "function" then showTemp(notifLabel, "Failed compile Infinite Yield", 4); return end
+                local succ, res = pcall(fn)
+                if succ then showTemp(notifLabel, "Infinite Yield executed", 3) else showTemp(notifLabel, "Error: "..tostring(res), 4) end
+            end)
+        end)
+
+        k00pBtn.MouseButton1Click:Connect(function()
+            if safeCopy(K00PGUI_LOADSTRING) then
+                showTemp(notifLabel, "k00pgui loadstring copied to clipboard", 3)
+            else
+                showTemp(notifLabel, "Clipboard not available. loadstring:\n"..K00PGUI_LOADSTRING, 6)
+            end
+        end)
+    end
+
+    -- Credits page
+    do
+        local page = Instance.new("Frame", content)
+        page.Size = UDim2.new(1,0,1,0)
+        page.Visible = false
+        pages["Credits"] = page
+
+        local t = Instance.new("TextLabel", page)
+        t.Size = UDim2.new(1,-16,1,-16)
+        t.Position = UDim2.new(0,8,0,8)
+        t.BackgroundColor3 = Color3.fromRGB(18,18,18)
+        t.TextColor3 = Color3.fromRGB(230,230,230)
+        t.Font = Enum.Font.SourceSans
+        t.TextSize = 14
+        t.TextWrapped = true
+        t.Text = "r0cketHub\n\nCreated by: Aimar\nAdapted UI & features by ChatGPT\nSafe mode: k00pgui not auto-run."
+        Instance.new("UICorner", t).CornerRadius = UDim.new(0,8)
+    end
+
+    -- Tab switching
+    local function hideAll()
+        for _,v in pairs(pages) do v.Visible = false end
+    end
+    hideAll(); pages["Home"].Visible = true
+
+    tHome.MouseButton1Click:Connect(function() hideAll(); pages["Home"].Visible = true end)
+    tExec.MouseButton1Click:Connect(function() hideAll(); pages["Executor"].Visible = true end)
+    tScriptHub.MouseButton1Click:Connect(function() hideAll(); pages["Script Hub"].Visible = true end)
+    tCredits.MouseButton1Click:Connect(function() hideAll(); pages["Credits"].Visible = true end)
+
+    -- Close/minimize
+    btnClose.MouseButton1Click:Connect(function() screen:Destroy() end)
+
+    -- final ready
+    showTemp(notifLabel, "r0cketHub ready — enjoy!", 4)
+end
+
+-- ---------- Start flow ----------
+spawn(function()
+    showSpinner(1.8)         -- initial spinner
+    showKeySystem()          -- then key system (will call progress + createMainHub if key ok)
+end)
